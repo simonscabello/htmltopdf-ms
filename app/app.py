@@ -6,7 +6,7 @@ import requests
 from botocore.exceptions import ClientError
 from datetime import datetime
 from flask import Flask, request, jsonify
-from weasyprint import HTML
+from weasyprint import HTML, CSS
 from dotenv import load_dotenv
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -128,7 +128,10 @@ def convert_to_pdf():
 
         # Gerar o arquivo PDF em memória
         pdf_data = io.BytesIO()
-        HTML(string=html).write_pdf(pdf_data)
+
+        css_content = '@page { size: landscape; margin: 1cm; }'
+
+        HTML(string=html).write_pdf(pdf_data, stylesheets=[CSS(string=css_content)])
 
         now = datetime.now()
         timestamp = now.strftime("%Y%m%d_%H%M%S")

@@ -8,7 +8,14 @@ RUN apk update &&  \
     pango-dev \
     gdk-pixbuf-dev \
     libffi-dev \
-    shared-mime-info
+    shared-mime-info \
+    fontconfig \
+    ttf-dejavu \
+    ttf-droid \
+    ttf-freefont \
+    ttf-liberation \
+    ttf-opensans \
+    ttf-inconsolata
 
 WORKDIR /app
 
