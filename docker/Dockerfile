@@ -12,9 +12,7 @@ RUN apk update &&  \
 
 WORKDIR /app
 
-COPY app/ /app
-COPY requirements.txt /app
-COPY app/.env /app
+COPY ./app .
 
 RUN pip install --no-cache-dir -r requirements.txt
 

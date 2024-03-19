@@ -2,6 +2,7 @@ import io
 import os
 import uuid
 import boto3
+import requests
 from botocore.exceptions import ClientError
 from datetime import datetime
 from flask import Flask, request, jsonify
@@ -24,6 +25,28 @@ MAIL_FROM_NAME = os.environ.get('MAIL_FROM_NAME')
 app = Flask(__name__)
 
 
+def sign_url(path, expiration=86400):
+    try:
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': AWS_S3_BUCKET_NAME, 'Key': path},
+            ExpiresIn=expiration
+        )
+
+        return url
+    except ClientError as e:
+        print(f"Erro ao gerar URL assinada: {e}")
+        return None
+    except Exception as e:
+        print(f"Erro inesperado ao gerar URL assinada: {e}")
+
+
 def upload_to_s3(pdf_data, pdf_name):
     try:
         s3 = boto3.client(
@@ -32,10 +55,16 @@ def upload_to_s3(pdf_data, pdf_name):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
         )
 
-        s3.put_object(Body=pdf_data, Bucket=AWS_S3_BUCKET_NAME, Key=pdf_name)
+        path = f'relatorios/{pdf_name}'
 
-        pdf_url = f"https://{AWS_S3_BUCKET_NAME}.s3.amazonaws.com/{pdf_name}"
-        return pdf_url
+        s3.put_object(Body=pdf_data, Bucket=AWS_S3_BUCKET_NAME, Key=path)
+
+        signed_url = sign_url(path)
+
+        if not signed_url:
+            return None
+
+        return signed_url
     except ClientError as e:
         print(f"Erro ao fazer upload do arquivo para o S3: {e}")
         return None
@@ -61,7 +90,10 @@ def send_email(pdf_url, pdf_name, email):
 
         msg.attach(MIMEText(body_text, 'plain'))
 
-        attachment = MIMEApplication(open('path_do_arquivo.pdf', 'rb').read())
+        response = requests.get(pdf_url)
+        pdf_data = response.content
+
+        attachment = MIMEApplication(pdf_data)
         attachment.add_header('Content-Disposition', 'attachment', filename=pdf_name)
         msg.attach(attachment)
 
@@ -118,4 +150,4 @@ def convert_to_pdf():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
