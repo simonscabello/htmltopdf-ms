@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import uuid
 import boto3
 import requests
@@ -20,6 +21,8 @@ AWS_S3_BUCKET_NAME = os.environ.get('AWS_S3_BUCKET_NAME')
 AWS_S3_REGION = os.environ.get('AWS_S3_REGION')
 MAIL_FROM_ADDRESS = os.environ.get('MAIL_FROM_ADDRESS')
 MAIL_FROM_NAME = os.environ.get('MAIL_FROM_NAME')
+SEND_MAIL = os.environ.get('SEND_MAIL')
+SAVE_LOCAL = os.environ.get('SAVE_LOCAL')
 
 
 app = Flask(__name__)
@@ -112,6 +115,22 @@ def send_email(pdf_url, pdf_name, email):
         return None
 
 
+def validate_email(email):
+    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+
+    if email_pattern.match(email):
+        return True
+    else:
+        return False
+
+
+def save_pdf_locally(pdf_data, pdf_name):
+    with open(pdf_name, 'wb') as f:
+        f.write(pdf_data.getvalue())
+    pdf_url = f"./{pdf_name}"
+    return pdf_url
+
+
 @app.route('/')
 def index():
     return jsonify({'message': 'OK'})
@@ -121,16 +140,23 @@ def index():
 def convert_to_pdf():
     try:
         data = request.json
+
         html = data.get('html')
         email = data.get('email')
+        page_type = data.get('page_type', 'portrait')
+
         if not html:
             return jsonify({'error': 'HTML não informado'}), 400
 
-        # Gerar o arquivo PDF em memória
+        if not validate_email(email):
+            return jsonify({'error': 'E-mail inválido'}), 400
+
+        if page_type == 'landscape':
+            css_content = '@page { size: landscape; margin: 1cm; }'
+        else:
+            css_content = '@page { size: portrait; margin: 1cm; }'
+
         pdf_data = io.BytesIO()
-
-        css_content = '@page { size: landscape; margin: 1cm; }'
-
         HTML(string=html).write_pdf(pdf_data, stylesheets=[CSS(string=css_content)])
 
         now = datetime.now()
@@ -138,9 +164,18 @@ def convert_to_pdf():
         random_id = str(uuid.uuid4())[:8]
         pdf_name = f"document_{timestamp}_{random_id}.pdf"
 
-        pdf_url = upload_to_s3(pdf_data.getvalue(), pdf_name)
-        if not pdf_url:
-            return jsonify({'error': 'Erro ao fazer upload do arquivo para o S3'}), 500
+        if SAVE_LOCAL:
+            pdf_url = save_pdf_locally(pdf_data, pdf_name)
+            if not pdf_url:
+                return jsonify({'error': 'Erro ao salvar o arquivo localmente'}), 500
+            return jsonify({'pdf_url': pdf_url}), 200
+        else:
+            pdf_url = upload_to_s3(pdf_data.getvalue(), pdf_name)
+            if not pdf_url:
+                return jsonify({'error': 'Erro ao fazer upload do arquivo para o S3'}), 500
+
+        if not SEND_MAIL:
+            return jsonify({'pdf_url': pdf_url}), 200
 
         send_result = send_email(pdf_url, pdf_name, email)
         if not send_result:
