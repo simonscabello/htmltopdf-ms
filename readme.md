@@ -19,11 +19,11 @@ Certifique-se de ter o Docker e o Docker Compose instalados na sua máquina.
 
 1. Clone o repositório para o seu ambiente local.
 2. Navegue até o diretório raiz do projeto.
-3. Crie um arquivo `.env` dentro da pasta app com as variáveis de ambiente conforme mencionado acima.
+3. Crie um arquivo `.env` com as variáveis de ambiente conforme mencionado acima.
 4. Execute o seguinte comando para construir e iniciar os contêineres Docker:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 Isso iniciará o aplicativo Flask e o servidor web estará acessível em `http://localhost:5000`.
 
