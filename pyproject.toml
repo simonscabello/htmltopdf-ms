@@ -2,7 +2,7 @@
 name = "htmltopdf-ms"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Simon Scabello <scabello57@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
