@@ -1,4 +1,6 @@
 import re
+import os
+from config import Configuration
 
 
 def validate_email(email) -> bool:
@@ -7,6 +9,13 @@ def validate_email(email) -> bool:
 
 
 def save_pdf_locally(pdf_data, pdf_name):
-    with open(pdf_name, 'wb') as f:
+    files_directory = os.path.join(os.getcwd(), Configuration().FILES_DIRECTORY)
+
+    if not os.path.exists(files_directory):
+        os.makedirs(files_directory)
+
+    file_path = os.path.join(files_directory, pdf_name)
+    with open(file_path, 'wb') as f:
         f.write(pdf_data.getvalue())
-    return f"./{pdf_name}"
+
+    return f'{Configuration().APP_URL}/download/{pdf_name}'

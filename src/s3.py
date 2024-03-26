@@ -1,10 +1,8 @@
 from config import Configuration
 
-
 import boto3
 import requests
 from botocore.exceptions import ClientError
-
 
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -13,10 +11,10 @@ from email.mime.text import MIMEText
 
 def send_email(pdf_url, pdf_name, email) -> str | None:
     try:
-        sender_email = Configuration.MAIL_FROM_ADDRESS
+        sender_email = Configuration().MAIL_FROM_ADDRESS
         receiver_email = email
 
-        ses_client = boto3.client('ses', region_name=Configuration.AWS_S3_REGION)
+        ses_client = boto3.client('ses', region_name=Configuration().AWS_S3_REGION)
 
         msg = MIMEMultipart()
         msg['Subject'] = 'Relatório'
@@ -50,13 +48,13 @@ def sign_url(path, expiration: int = 86400):
     try:
         s3 = boto3.client(
             's3',
-            aws_access_key_id=Configuration.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Configuration.AWS_SECRET_ACCESS_KEY
+            aws_access_key_id=Configuration().AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=Configuration().AWS_SECRET_ACCESS_KEY
         )
 
         return s3.generate_presigned_url(
             'get_object',
-            Params={'Bucket': Configuration.AWS_S3_BUCKET_NAME, 'Key': path},
+            Params={'Bucket': Configuration().AWS_S3_BUCKET_NAME, 'Key': path},
             ExpiresIn=expiration
         )
     except ClientError as e:
@@ -70,13 +68,13 @@ def upload_to_s3(pdf_data, pdf_name: str) -> str | None:
     try:
         s3 = boto3.client(
             's3',
-            aws_access_key_id=Configuration.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Configuration.AWS_SECRET_ACCESS_KEY
+            aws_access_key_id=Configuration().AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=Configuration().AWS_SECRET_ACCESS_KEY
         )
 
-        path = f'relatorios/{pdf_name}'
+        path = f'{Configuration().AWS_S3_DIRECTORY}/{pdf_name}'
 
-        s3.put_object(Body=pdf_data, Bucket=Configuration.AWS_S3_BUCKET_NAME, Key=path)
+        s3.put_object(Body=pdf_data, Bucket=Configuration().AWS_S3_BUCKET_NAME, Key=path)
         signed_url = sign_url(path)
 
         return None if not signed_url else signed_url
